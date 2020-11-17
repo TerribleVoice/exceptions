@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
 using System.Xml.Serialization;
 using NLog;
 
@@ -18,13 +19,19 @@ namespace Exceptions
         {
             try
             {
-                var filenames = args.Any() ? args : new[] { "text.txt" };
+                var filenames = args.Any() ? args : new[] {"text.txt"};
                 var settings = LoadSettings();
                 ConvertFiles(filenames, settings);
             }
-            catch (Exception e)
+            catch (AggregateException e)
             {
-                log.Error("Некорректная строка");
+                /*if (e.InnerException?.GetType() == typeof(FileNotFoundException))
+                    log.Error()*/
+                log.Error(e.Message);
+            }
+            catch (InvalidOperationException)
+            {
+                log.Error("XmlException Не удалось прочитать файл настроек");
             }
         }
 
@@ -52,9 +59,9 @@ namespace Exceptions
                 log.Info("Source Culture " + Thread.CurrentThread.CurrentCulture.Name);
             }
             IEnumerable<string> lines;
-            try 
+            try
             {
-                lines = PrepareLines(filename); 
+                lines = PrepareLines(filename);
             }
             catch
             {
