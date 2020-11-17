@@ -25,9 +25,7 @@ namespace Exceptions
             }
             catch (AggregateException e)
             {
-                /*if (e.InnerException?.GetType() == typeof(FileNotFoundException))
-                    log.Error()*/
-                log.Error(e.Message);
+                log.Error(e.InnerException);
             }
             catch (InvalidOperationException)
             {
@@ -58,20 +56,19 @@ namespace Exceptions
                 log.Info("Processing file " + filename);
                 log.Info("Source Culture " + Thread.CurrentThread.CurrentCulture.Name);
             }
-            IEnumerable<string> lines;
+
+            var lines = PrepareLines(filename);
             try
             {
-                lines = PrepareLines(filename);
+                var convertedLines = lines
+                    .Select(ConvertLine)
+                    .Select(s => s.Length + " " + s);
+                File.WriteAllLines(filename + ".out", convertedLines);
             }
-            catch
+            catch (Exception e)
             {
-                log.Error($"File {filename} not found"); 
-                return;
+                throw new Exception($"Не удалось сконвертировать {filename}", e);
             }
-            var convertedLines = lines
-                .Select(ConvertLine)
-                .Select(s => s.Length + " " + s);
-            File.WriteAllLines(filename + ".out", convertedLines);
         }
 
         private static IEnumerable<string> PrepareLines(string filename)
@@ -90,19 +87,24 @@ namespace Exceptions
         {
             if (TryConvertAsDateTime(arg, out var result))
                 return result;
-            
-            return TryConvertAsDouble(arg, out result) ? result : ConvertAsCharIndexInstruction(arg);
+            if (TryConvertAsDouble(arg, out result))
+                return result;
+            if (TryConvertAsCharIndexInstruction(arg, out result))
+                return result;
+            throw new Exception("Некорректная строка");
         }
 
-        private static string ConvertAsCharIndexInstruction(string s)
+        private static bool TryConvertAsCharIndexInstruction(string s, out string result)
         {
+            result = default;
             var parts = s.Split();
-            if (parts.Length < 2) return null;
+            if (parts.Length < 2) return false;
             var charIndex = int.Parse(parts[0]);
-            if ((charIndex < 0) || (charIndex >= parts[1].Length))
-                return null;
+            if (charIndex < 0 || charIndex >= parts[1].Length)
+                return false;
             var text = parts[1];
-            return text[charIndex].ToString();
+            result = text[charIndex].ToString();
+            return true;
         }
 
         private static bool TryConvertAsDateTime(string arg, out string result)
