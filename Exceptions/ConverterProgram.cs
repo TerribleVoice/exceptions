@@ -24,7 +24,7 @@ namespace Exceptions
             }
             catch (Exception e)
             {
-                log.Error(e);
+                log.Error("Некорректная строка");
             }
         }
 
@@ -79,23 +79,12 @@ namespace Exceptions
             yield return lineIndex.ToString();
         }
 
-        public static string ConvertLine(string arg) 
-        {                                                
-            try
-            {
-                return ConvertAsDateTime(arg);
-            }
-            catch
-            {
-                try
-                {
-                    return ConvertAsDouble(arg);
-                }
-                catch
-                {
-                    return ConvertAsCharIndexInstruction(arg);
-                }
-            }
+        public static string ConvertLine(string arg)
+        {
+            if (TryConvertAsDateTime(arg, out var result))
+                return result;
+            
+            return TryConvertAsDouble(arg, out result) ? result : ConvertAsCharIndexInstruction(arg);
         }
 
         private static string ConvertAsCharIndexInstruction(string s)
@@ -109,14 +98,20 @@ namespace Exceptions
             return text[charIndex].ToString();
         }
 
-        private static string ConvertAsDateTime(string arg)
+        private static bool TryConvertAsDateTime(string arg, out string result)
         {
-            return DateTime.Parse(arg).ToString(CultureInfo.InvariantCulture);
+            var isDone = DateTime.TryParse(arg, out var dateTimeResult);
+            result = isDone ? dateTimeResult.ToString(CultureInfo.InvariantCulture) : default;
+            
+            return isDone;
         }
 
-        private static string ConvertAsDouble(string arg)
+        private static bool TryConvertAsDouble(string arg, out string result)
         {
-            return double.Parse(arg).ToString(CultureInfo.InvariantCulture);
+            var peaceDone = double.TryParse(arg, out var doubleResult);
+            result = peaceDone ? doubleResult.ToString(CultureInfo.InvariantCulture) : default;
+            
+            return peaceDone;
         }
     }
 }
